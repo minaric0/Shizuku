@@ -20,6 +20,7 @@ import moe.shizuku.manager.ktx.toHtml
 import moe.shizuku.manager.starter.StarterActivity
 import moe.shizuku.manager.utils.CustomTabsHelper
 import moe.shizuku.manager.utils.EnvironmentUtils
+import moe.shizuku.manager.utils.LocalNetworkPermission
 import rikka.core.content.asActivity
 import rikka.html.text.HtmlCompat
 import rikka.recyclerview.BaseViewHolder
@@ -66,6 +67,7 @@ class StartWirelessAdbViewHolder(binding: HomeStartWirelessAdbBinding, root: Vie
 
     private fun onAdbClicked(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!LocalNetworkPermission.ensure(context.asActivity<FragmentActivity>())) return
             AdbDialogFragment().show(context.asActivity<FragmentActivity>().supportFragmentManager)
             return
         }
@@ -86,6 +88,7 @@ class StartWirelessAdbViewHolder(binding: HomeStartWirelessAdbBinding, root: Vie
 
     @RequiresApi(Build.VERSION_CODES.R)
     private fun onPairClicked(context: Context) {
+        if (!LocalNetworkPermission.ensure(context.asActivity<FragmentActivity>())) return
         if ((context.display?.displayId ?: -1) > 0) {
             // Running in a multi-display environment (e.g., Windows Subsystem for Android),
             // pairing dialog can be displayed simultaneously with Shizuku.

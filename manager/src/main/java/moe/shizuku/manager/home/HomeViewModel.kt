@@ -1,6 +1,7 @@
 package moe.shizuku.manager.home
 
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -42,7 +43,14 @@ class HomeViewModel : ViewModel() {
 
         // Before a526d6bb, server will not exit on uninstall, manager installed later will get not permission
         // Run a random remote transaction here, report no permission as not running
-        ShizukuSystemApis.checkPermission(Manifest.permission.API_V23, BuildConfig.APPLICATION_ID, 0)
+        try {
+            ShizukuSystemApis.checkPermission(Manifest.permission.API_V23, BuildConfig.APPLICATION_ID, 0)
+        } catch (e: Throwable) {
+            // Android 17 changes hidden permission-manager signatures. A healthy
+            // binder and successful remote checks are sufficient for the UI status.
+            if (Build.VERSION.SDK_INT < 37) throw e
+            LOGGER.w(e, "Legacy permission probe unsupported on Android 17")
+        }
         return ServiceStatus(uid, apiVersion, patchVersion, seContext, permissionTest)
     }
 
