@@ -15,6 +15,7 @@ import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import moe.shizuku.manager.AppConstants
 import moe.shizuku.manager.app.AppBarActivity
+import moe.shizuku.manager.utils.LocalNetworkPermission
 import moe.shizuku.manager.databinding.AdbPairingTutorialActivityBinding
 import rikka.compatibility.DeviceCompatibility
 
@@ -101,7 +102,17 @@ class AdbPairingTutorialActivity : AppBarActivity() {
         }
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 3701 && LocalNetworkPermission.isGranted(this) && notificationEnabled) {
+            startPairingService()
+        }
+    }
+
     private fun startPairingService() {
+        if (!LocalNetworkPermission.ensure(this)) return
         val intent = AdbPairingService.startIntent(this)
         try {
             startForegroundService(intent)

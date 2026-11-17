@@ -28,7 +28,12 @@ class AdbMdns(
         if (running) return
         running = true
         if (!registered) {
-            nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, listener)
+            try {
+                nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, listener)
+            } catch (e: RuntimeException) {
+                running = false
+                Log.w(TAG, "Discovery start failed", e)
+            }
         }
     }
 
@@ -36,12 +41,23 @@ class AdbMdns(
         if (!running) return
         running = false
         if (registered) {
-            nsdManager.stopServiceDiscovery(listener)
+            try {
+                nsdManager.stopServiceDiscovery(listener)
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "Discovery stop failed", e)
+            }
         }
     }
 
     private fun onDiscoveryStart() {
         registered = true
+        if (!running) {
+            try {
+                nsdManager.stopServiceDiscovery(listener)
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "Late discovery stop failed", e)
+            }
+        }
     }
 
     private fun onDiscoveryStop() {
@@ -49,11 +65,16 @@ class AdbMdns(
     }
 
     private fun onServiceFound(info: NsdServiceInfo) {
-        nsdManager.resolveService(info, ResolveListener(this))
+        if (!running) return
+        try {
+            nsdManager.resolveService(info, ResolveListener(this))
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "Unable to resolve ADB service", e)
+        }
     }
 
     private fun onServiceLost(info: NsdServiceInfo) {
-        if (info.serviceName == serviceName) observer.onChanged(-1)
+        if (running && info.serviceName == serviceName) observer.onChanged(-1)
     }
 
     private fun onServiceResolved(resolvedService: NsdServiceInfo) {
@@ -88,7 +109,9 @@ class AdbMdns(
         }
 
         override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-            Log.v(TAG, "onStartDiscoveryFailed: $serviceType, $errorCode")
+            Log.w(TAG, "onStartDiscoveryFailed: $serviceType, $errorCode")
+            adbMdns.onDiscoveryStop()
+            adbMdns.running = false
         }
 
         override fun onDiscoveryStopped(serviceType: String) {

@@ -22,6 +22,7 @@ import moe.shizuku.manager.adb.AdbMdns
 import moe.shizuku.manager.adb.PreferenceAdbKeyStore
 import moe.shizuku.manager.starter.Starter
 import moe.shizuku.manager.utils.UserHandleCompat
+import moe.shizuku.manager.utils.LocalNetworkPermission
 import rikka.shizuku.Shizuku
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -59,9 +60,13 @@ class BootCompleteReceiver : BroadcastReceiver() {
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun adbStart(context: Context) {
+        if (!LocalNetworkPermission.isGranted(context)) {
+            Log.w(AppConstants.TAG, "Automatic start requires the Android 17 local network permission")
+            return
+        }
         val cr = context.contentResolver
         Settings.Global.putInt(cr, "adb_wifi_enabled", 1)
-        Settings.Global.putInt(cr, Settings.Global.ADB_ENABLED, 1)
+        if (Build.VERSION.SDK_INT < 37) Settings.Global.putInt(cr, Settings.Global.ADB_ENABLED, 1)
         Settings.Global.putLong(cr, "adb_allowed_connection_time", 0L)
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
@@ -71,17 +76,21 @@ class BootCompleteReceiver : BroadcastReceiver() {
                 try {
                     val keystore = PreferenceAdbKeyStore(ShizukuSettings.getPreferences())
                     val key = AdbKey(keystore, "shizuku")
-                    val client = AdbClient("127.0.0.1", port, key)
-                    client.connect()
-                    client.shellCommand(Starter.internalCommand, null)
-                    client.close()
-                } catch (_: Exception) {
+                    AdbClient("127.0.0.1", port, key).use { client ->
+                        client.connect()
+                        client.shellCommand(Starter.internalCommand, null)
+                    }
+                    latch.countDown()
+                } catch (e: Exception) {
+                    Log.w(AppConstants.TAG, "Automatic ADB start failed on port $port", e)
                 }
-                latch.countDown()
             }
-            if (Settings.Global.getInt(cr, "adb_wifi_enabled", 0) == 1) {
+            // Android 17 may return a synthetic 0 for debugging settings. Probe the
+            // actual TLS service instead of trusting the setting's reported value.
+            try {
                 adbMdns.start()
-                latch.await(3, TimeUnit.SECONDS)
+                latch.await(8, TimeUnit.SECONDS)
+            } finally {
                 adbMdns.stop()
             }
             pending.finish()

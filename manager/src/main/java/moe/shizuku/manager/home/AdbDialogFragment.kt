@@ -64,7 +64,7 @@ class AdbDialogFragment : DialogFragment() {
         if (context.checkSelfPermission(WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED) {
             val cr = context.contentResolver
             Settings.Global.putInt(cr, "adb_wifi_enabled", 1)
-            Settings.Global.putInt(cr, Settings.Global.ADB_ENABLED, 1)
+            if (Build.VERSION.SDK_INT < 37) Settings.Global.putInt(cr, Settings.Global.ADB_ENABLED, 1)
             Settings.Global.putLong(cr, "adb_allowed_connection_time", 0L)
         }
 
