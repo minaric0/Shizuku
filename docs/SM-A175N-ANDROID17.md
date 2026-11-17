@@ -10,7 +10,7 @@ This is a compatibility-focused fork, not a root or system-UID escalation tool.
 - Declare normal `USE_LOOPBACK_INTERFACE` for local ADB.
 - Detect wireless-debugging ports through mDNS rather than `Settings.Global.ADB_ENABLED`, which can report an artificial zero.
 - Keep the original Shizuku binder protocol and require the original TLS pairing / user authorization.
-- Bound ADB connect/read operations to avoid indefinitely hung UI and boot startup.
+- Use the actual local-interface mDNS host instead of hard-coded loopback (required when Android 17 adbd binds to WLAN).\n- Bound ADB connect/read operations to avoid indefinitely hung UI and boot startup.
 - Do not attempt wireless startup from a boot receiver before local-network access is granted.
 - Debug APK is built in GitHub Actions; no signing secrets required.
 

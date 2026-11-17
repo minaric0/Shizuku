@@ -26,7 +26,7 @@ class AdbDialogFragment : DialogFragment() {
 
     private lateinit var binding: AdbDialogBinding
     private lateinit var adbMdns: AdbMdns
-    private val port = MutableLiveData<Int>()
+    private val port = MutableLiveData<Pair<String, Int>>()
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val context = requireContext()
@@ -79,17 +79,17 @@ class AdbDialogFragment : DialogFragment() {
         }
 
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener {
-            startAndDismiss(EnvironmentUtils.getAdbTcpPort())
+            startAndDismiss("127.0.0.1", EnvironmentUtils.getAdbTcpPort())
         }
 
         port.observe(this) {
-            if (it > 65535 || it < 1) return@observe
-            startAndDismiss(it)
+            if (it.second !in 1..65535) return@observe
+            port.removeObservers(this)
+            startAndDismiss(it.first, it.second)
         }
     }
 
-    private fun startAndDismiss(port: Int) {
-        val host = "127.0.0.1"
+    private fun startAndDismiss(host: String, port: Int) {
         val intent = Intent(context, StarterActivity::class.java).apply {
             putExtra(StarterActivity.EXTRA_IS_ROOT, false)
             putExtra(StarterActivity.EXTRA_HOST, host)
